@@ -9,10 +9,6 @@ spec:
   addons:
     grafana:
       enabled: true
-    jaeger:
-      install:
-        storage:
-          type: Memory
     kiali:
       enabled: true
     prometheus:
@@ -21,10 +17,7 @@ spec:
     type: Istiod
   telemetry:
     type: Istiod
-  tracing:
-    sampling: 10000
-    type: Jaeger
-  version: v2.6
+  version: v2.3
   runtime:
     defaults:
       container:
@@ -32,7 +25,7 @@ spec:
   proxy:
     accessLogging:
       file:
-        name: /dev/stdout        
+        name: /dev/stdout
   gateways:
     additionalEgress:
       stage-mesh-egress:
@@ -64,5 +57,7 @@ spec:
           - port: 8188
             name: https-discovery  #note HTTPS here
   security:
+    dataPlane:
+      mtls: false
     trust:
-      domain: prod-mesh.local  
+      domain: prod-mesh.local
