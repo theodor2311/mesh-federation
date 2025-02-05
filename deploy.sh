@@ -29,14 +29,22 @@ oc wait --for condition=Ready -n prod-mesh smcp/prod-mesh --timeout 300s
 log "Waiting for stage-mesh installation to complete"
 oc wait --for condition=Ready -n stage-mesh smcp/stage-mesh --timeout 300s
 
-log "Installing details v2 service in stage-mesh"
-oc apply -n stage-bookinfo -f stage-mesh/stage-detail-v2-deployment.yaml
-oc apply -n stage-bookinfo -f stage-mesh/stage-detail-v2-service.yaml
+log "Installing bookinfo application in stage-mesh"
+oc apply -n stage-bookinfo -f https://raw.githubusercontent.com/istio/istio/1.19.1/samples/bookinfo/platform/kube/bookinfo.yaml
+oc apply -n stage-bookinfo -f https://raw.githubusercontent.com/istio/istio/1.19.1/samples/bookinfo/networking/bookinfo-gateway.yaml
+for deployment in $(oc get deployments -o jsonpath='{.items[*].metadata.name}' -n stage-bookinfo);do
+oc -n stage-bookinfo patch deployment $deployment -p '{"spec":{"template":{"metadata":{"annotations":{"sidecar.istio.io/inject": "true"}}}}}'
+[[ ! -z $(oc -n stage-bookinfo get deployment $deployment -o jsonpath='{.spec.template.spec.containers[*].securityContext}') ]] && oc -n stage-bookinfo patch deployment $deployment --type='json' -p='[{"op": "remove", "path": "/spec/template/spec/containers/0/securityContext"}]'
+done
+
 
 log "Installing bookinfo application in prod-mesh"
-oc apply -n prod-bookinfo -f https://raw.githubusercontent.com/Maistra/istio/maistra-2.6/samples/bookinfo/platform/kube/bookinfo.yaml
-oc apply -n prod-bookinfo -f https://raw.githubusercontent.com/Maistra/istio/maistra-2.6/samples/bookinfo/networking/bookinfo-gateway.yaml
-oc apply -n prod-bookinfo -f https://raw.githubusercontent.com/Maistra/istio/maistra-2.6/samples/bookinfo/networking/destination-rule-all.yaml
+oc apply -n prod-bookinfo -f https://raw.githubusercontent.com/istio/istio/1.19.1/samples/bookinfo/platform/kube/bookinfo.yaml
+oc apply -n prod-bookinfo -f https://raw.githubusercontent.com/istio/istio/1.19.1/samples/bookinfo/networking/bookinfo-gateway.yaml
+for deployment in $(oc get deployments -o jsonpath='{.items[*].metadata.name}' -n prod-bookinfo);do
+oc -n prod-bookinfo patch deployment $deployment -p '{"spec":{"template":{"metadata":{"annotations":{"sidecar.istio.io/inject": "true"}}}}}'
+[[ ! -z $(oc -n prod-bookinfo get deployment $deployment -o jsonpath='{.spec.template.spec.containers[*].securityContext}') ]] && oc -n prod-bookinfo patch deployment $deployment --type='json' -p='[{"op": "remove", "path": "/spec/template/spec/containers/0/securityContext"}]'
+done
 
 log "Retrieving Istio CA Root certificates"
 # This is for Mac or BSD based systems: gsed ':a;N;$!ba;s/\n/\\\n    /g'
@@ -63,6 +71,12 @@ rm stage-mesh-cert.crt
 log "Installing VirtualService for prod-mesh"
 oc apply -n prod-bookinfo -f prod-mesh/vs-mirror-details.yaml
 # oc apply -f prod-mesh/vs-split-details.yaml
+
+# Scale Down reviews v2 v3 for federation testing
+oc -n prod-bookinfo scale deploy/reviews-v2 --replicas=0
+oc -n prod-bookinfo scale deploy/reviews-v3 --replicas=0
+oc -n stage-bookinfo scale deploy/reviews-v2 --replicas=0
+oc -n stage-bookinfo scale deploy/reviews-v3 --replicas=0
 
 log 'INSTALLATION COMPLETE
 
