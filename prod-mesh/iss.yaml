@@ -5,10 +5,10 @@ metadata:
   namespace: prod-mesh
 spec:
   importRules:
-    - importAsLocal: false
+    - importAsLocal: true
       nameSelector:
         alias:
-          name: details-v2
+          name: details
           namespace: prod-bookinfo
         name: details
         namespace: stage-bookinfo
