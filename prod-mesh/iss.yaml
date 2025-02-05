@@ -13,3 +13,11 @@ spec:
         name: details
         namespace: stage-bookinfo
       type: NameSelector
+    - importAsLocal: true
+      nameSelector:
+        alias:
+          name: reviews
+          namespace: prod-bookinfo
+        name: reviews
+        namespace: stage-bookinfo
+      type: NameSelector
